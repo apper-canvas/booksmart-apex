@@ -96,20 +96,21 @@ const TrainBooking = () => {
       setFormData({
         id: '',
       origin: '',
-      destination: '',
-      date: '',
-      time: '',
-      passengerName: '',
-      passengerCount: 1,
+        destination: '',
+        date: '',
+        time: '',
+        passengerName: '',
+        passengerCount: 1,
+      contactNumber: ''
+    });
       });
     } catch (error) {
       toast.error(`Failed to create booking: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
-      contactNumber: ''
-    });
-  const handleCancelBooking = async (id) => {
+  };
+
 
       try {
         setIsLoading(true);
@@ -120,9 +121,6 @@ const TrainBooking = () => {
         toast.error(`Failed to cancel booking: ${error.message}`);
         setIsLoading(false);
       }
-    }  
-      toast.info('Train booking cancelled');
-    }
   };
 
   return (
