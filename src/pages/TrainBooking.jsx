@@ -95,14 +95,14 @@ const TrainBooking = () => {
       // Reset form
       setFormData({
         id: '',
-      origin: '',
+        origin: '',
         destination: '',
         date: '',
         time: '',
         passengerName: '',
         passengerCount: 1,
-      contactNumber: ''
-    });
+        classType: 'economy',
+        contactNumber: ''
       });
     } catch (error) {
       toast.error(`Failed to create booking: ${error.message}`);
@@ -111,7 +111,8 @@ const TrainBooking = () => {
     }
   };
 
-
+  const handleCancelBooking = async (id) => {
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
       try {
         setIsLoading(true);
         await deleteTrainBooking(id);
@@ -269,9 +270,6 @@ const TrainBooking = () => {
               
               <div>
                 <label className="block text-sm mb-1">Contact Number</label>
-                    min="1"
-                    max="10"
-                    step="1"
                 <div className="relative">
                   <PhoneIcon className="absolute left-3 top-2.5 w-4 h-4 text-surface-400" />
                   <input
