@@ -6,6 +6,7 @@ import getIcon from './utils/iconUtils';
 
 // Pages
 import BusBooking from './pages/BusBooking';
+import TrainBooking from './pages/TrainBooking';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
 
@@ -32,6 +33,7 @@ function App() {
   const MoonIcon = getIcon('Moon');
   const SunIcon = getIcon('Sun');
   const BusIcon = getIcon('Bus');
+  const TrainIcon = getIcon('Train');
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -51,6 +53,10 @@ function App() {
             <a href="/bus-booking" className="flex items-center gap-1 text-surface-600 hover:text-primary transition-colors">
               <BusIcon className="w-4 h-4" />
               <span>Bus Booking</span>
+            </a>
+            <a href="/train-booking" className="flex items-center gap-1 text-surface-600 hover:text-primary transition-colors">
+              <TrainIcon className="w-4 h-4" />
+              <span>Train Booking</span>
             </a>
           </div>
           
@@ -83,6 +89,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/bus-booking" element={<BusBooking />} />
+            <Route path="/train-booking" element={<TrainBooking />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>
