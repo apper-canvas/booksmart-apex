@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { format, parseISO, addDays, isAfter, startOfToday } from 'date-fns';
+import { fetchAppointments, createAppointment, deleteAppointment } from '../services/appointmentService';
+import { useSelector } from 'react-redux';
 import getIcon from '../utils/iconUtils';
 
 // Declare icons at the top
@@ -14,6 +16,7 @@ const XIcon = getIcon('X');
 const TrashIcon = getIcon('Trash');
 const InfoIcon = getIcon('Info');
 const RefreshCwIcon = getIcon('RefreshCw');
+const LoaderIcon = getIcon('Loader2');
 
 function MainFeature() {
   // State for the appointment form
@@ -27,20 +30,50 @@ function MainFeature() {
     time: '09:00',
     notes: ''
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // State for the list of appointments
-  const [appointments, setAppointments] = useState(() => {
-    const saved = localStorage.getItem('appointments');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [appointments, setAppointments] = useState([]);
   
+  // Get user information from Redux store
+  const { user } = useSelector((state) => state.user);
+  
+  // Load appointments from database
+  const loadAppointments = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchAppointments();
+      
+      // Map the API response to our component state format
+      const formattedAppointments = data.map(appointment => ({
+        id: appointment.Id,
+        name: appointment.Name,
+        email: appointment.email,
+        phone: appointment.phone,
+        service: appointment.service,
+        date: appointment.date,
+        time: appointment.time,
+        notes: appointment.notes,
+        status: appointment.status,
+        createdAt: appointment.CreatedOn
+      }));
+      
+      setAppointments(formattedAppointments);
+    } catch (error) {
+      toast.error(`Error loading appointments: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // List of available services
   const services = [
-    { id: 'consultation', name: 'Initial Consultation', duration: 30 },
-    { id: 'haircut', name: 'Haircut & Styling', duration: 60 },
-    { id: 'massage', name: 'Massage Therapy', duration: 90 },
-    { id: 'facial', name: 'Facial Treatment', duration: 60 },
-    { id: 'coaching', name: 'Coaching Session', duration: 45 }
+    { id: 'Initial Consultation', name: 'Initial Consultation', duration: 30 },
+    { id: 'Haircut & Styling', name: 'Haircut & Styling', duration: 60 },
+    { id: 'Massage Therapy', name: 'Massage Therapy', duration: 90 },
+    { id: 'Facial Treatment', name: 'Facial Treatment', duration: 60 },
+    { id: 'Coaching Session', name: 'Coaching Session', duration: 45 }
   ];
   
   // Available time slots
@@ -49,11 +82,11 @@ function MainFeature() {
     '14:00', '15:00', '16:00', '17:00'
   ];
   
-  // Save appointments to localStorage whenever it changes
+  // Load appointments on component mount
   useEffect(() => {
-    localStorage.setItem('appointments', JSON.stringify(appointments));
-  }, [appointments]);
-  
+    loadAppointments();
+  }, []);
+
   // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -61,7 +94,7 @@ function MainFeature() {
   };
   
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Form validation
@@ -94,43 +127,52 @@ function MainFeature() {
       toast.error("This time slot is already booked. Please select another.");
       return;
     }
-    
-    // Create new appointment
-    const newAppointment = {
-      id: Date.now(),
-      ...formData,
-      status: 'confirmed',
-      createdAt: new Date().toISOString(),
-    };
-    
-    setAppointments([...appointments, newAppointment]);
-    
-    // Reset form
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      service: '',
-      date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-      time: '09:00',
-      notes: ''
-    });
-    
-    setIsFormOpen(false);
+    try {
+      setIsSubmitting(true);
+      await createAppointment(formData);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        service: '',
+        date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+        time: '09:00',
+        notes: ''
+      });
+      
+      setIsFormOpen(false);
+      toast.success("Appointment booked successfully!");
+      loadAppointments();
+    } catch (error) {
+      toast.error(`Failed to create appointment: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
     toast.success("Appointment booked successfully!");
   };
   
-  // Handle appointment cancellation
+  const handleCancelAppointment = async (id) => {
   const handleCancelAppointment = (id) => {
-    if (confirm("Are you sure you want to cancel this appointment?")) {
-      setAppointments(appointments.filter(appointment => appointment.id !== id));
+      try {
+        await deleteAppointment(id);
+        toast.success("Appointment cancelled successfully");
+        loadAppointments();
+      } catch (error) {
+        toast.error(`Failed to cancel appointment: ${error.message}`);
+      }
       toast.success("Appointment cancelled successfully");
     }
   };
   
   // Formatting function for displaying dates
-  const formatAppointmentDate = (dateString, timeString) => {
-    const date = parseISO(`${dateString}T${timeString}`);
+    try {
+      const date = parseISO(`${dateString}T${timeString}`);
+      return format(date, 'EEEE, MMMM d, yyyy - h:mm a');
+    } catch (error) {
+      return `${dateString} at ${timeString}`;
+    }
     return format(date, 'EEEE, MMMM d, yyyy - h:mm a');
   };
   
@@ -148,12 +190,13 @@ function MainFeature() {
   
   // Reset all appointments (for demo purposes)
   const handleResetAll = () => {
-    if (confirm("Are you sure you want to delete all appointments? This cannot be undone.")) {
+    if (confirm("This will only clear your local view. Actual data will remain in database.")) {
       setAppointments([]);
-      toast.success("All appointments have been deleted");
+      toast.info("Local view cleared");
     }
   };
 
+  // Loading state display
   return (
     <div className="card overflow-visible">
       <div className="p-6 border-b border-surface-200 dark:border-surface-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -359,8 +402,10 @@ function MainFeature() {
                 <button
                   type="submit"
                   className="btn btn-primary"
+                  disabled={isSubmitting}
                 >
-                  Book Appointment
+                  {isSubmitting ? <span className="flex items-center gap-2"><LoaderIcon className="w-4 h-4 animate-spin" /> 
+                  Processing...</span> : "Book Appointment"}
                 </button>
               </div>
             </form>
@@ -371,7 +416,8 @@ function MainFeature() {
       {/* Appointments list */}
       <div className="p-6">
         {appointments.length === 0 ? (
-          <div className="text-center py-12">
+          isLoading ? <div className="text-center py-12"><LoaderIcon className="w-12 h-12 mx-auto text-primary animate-spin" /></div> :
+          (<div className="text-center py-12">
             <div className="bg-surface-100 dark:bg-surface-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <CalendarIcon className="w-8 h-8 text-surface-400" />
             </div>

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import getIcon from '../utils/iconUtils';
+import { fetchBusBookings, createBusBooking, updateBusBooking, deleteBusBooking } from '../services/busBookingService';
+import { useSelector } from 'react-redux';
 
 const BusBooking = () => {
   const [busBookings, setBusBookings] = useState([]);
@@ -29,31 +31,56 @@ const BusBooking = () => {
     seatType: 'regular',
     contactNumber: ''
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Get user information from Redux store
+  const { user } = useSelector((state) => state.user);
 
   // Icons
   const PlusIcon = getIcon('Plus');
   const MapPinIcon = getIcon('MapPin');
   const CalendarIcon = getIcon('Calendar');
   const UserIcon = getIcon('User');
+  const LoaderIcon = getIcon('Loader2');
   const EditIcon = getIcon('Edit');
   const ClockIcon = getIcon('Clock');
   const CheckIcon = getIcon('Check');
   const PhoneIcon = getIcon('Phone');
   const XIcon = getIcon('X');
   const BusIcon = getIcon('Bus');
-
-  // Load bookings from localStorage on component mount
-  useEffect(() => {
-    const savedBookings = localStorage.getItem('busBookings');
-    if (savedBookings) {
-      setBusBookings(JSON.parse(savedBookings));
+  
+  // Load bookings from database on component mount
+  const loadBusBookings = async () => {
+    try {
+      setIsLoading(true);
+      const bookings = await fetchBusBookings();
+      
+      // Map the API response to our component state format
+      const formattedBookings = bookings.map(booking => ({
+        id: booking.Id,
+        origin: booking.origin,
+        destination: booking.destination,
+        date: booking.date,
+        time: booking.time,
+        passengerName: booking.passenger_name,
+        passengerCount: booking.passenger_count,
+        seatType: booking.seat_type,
+        contactNumber: booking.contact_number,
+        createdAt: booking.CreatedOn
+      }));
+      
+      setBusBookings(formattedBookings);
+    } catch (error) {
+      toast.error(`Error loading bus bookings: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
 
-  // Save bookings to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('busBookings', JSON.stringify(busBookings));
-  }, [busBookings]);
+    loadBusBookings();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -69,26 +96,26 @@ const BusBooking = () => {
       ...editFormData,
       [name]: value
     });
-  };
+  
+  const handleAddBooking = async (e) => {
   const handleAddBooking = (e) => {
     e.preventDefault();
     
     // Simple validation
-    if (!formData.origin || !formData.destination || !formData.date || !formData.time || !formData.passengerName) {
+      toast.error("Please fill in all required fields");
       toast.error('Please fill in all required fields');
       return;
-    }
-
-    const newBooking = {
-      ...formData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-
-    setBusBookings([...busBookings, newBooking]);
-    toast.success('Bus booking added successfully!');
-    setIsFormOpen(false);
-    setFormData({
+    
+    try {
+      setIsSubmitting(true);
+      await createBusBooking(formData);
+      toast.success("Bus booking added successfully!");
+      setIsFormOpen(false);
+      loadBusBookings();
+      
+      // Reset form data
+      setFormData({
+        id: '',
       id: '',
       origin: '',
       destination: '',
@@ -97,7 +124,14 @@ const BusBooking = () => {
       passengerName: '',
       passengerCount: 1,
       seatType: 'regular',
-      contactNumber: ''
+      });
+    } catch (error) {
+      toast.error(`Failed to create booking: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+    
+    
     });
   };
 
@@ -108,40 +142,50 @@ const BusBooking = () => {
     setIsEditFormOpen(true);
   };
 
-  const handleUpdateBooking = (e) => {
+  const handleUpdateBooking = async (e) => {
     e.preventDefault();
     
     // Simple validation
     if (!editFormData.date || !editFormData.time || !editFormData.passengerName) {
-      toast.error('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
-
-    // Update the booking
-    const updatedBookings = busBookings.map(booking => {
-      if (booking.id === editFormData.id) {
-        return {
-          ...booking,
-          passengerName: editFormData.passengerName,
-          date: editFormData.date,
-          time: editFormData.time,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return booking;
-    });
-
-    setBusBookings(updatedBookings);
-    toast.success('Booking updated successfully!');
-    setIsEditFormOpen(false);
-  };
-
-  const handleCancelBooking = (id) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      setBusBookings(busBookings.filter(booking => booking.id !== id));
-      toast.info('Bus booking cancelled');
+    
+    try {
+      setIsSubmitting(true);
+      await updateBusBooking(editFormData.id, {
+        passengerName: editFormData.passengerName,
+        date: editFormData.date,
+        time: editFormData.time
+      });
+      toast.success("Booking updated successfully!");
+      setIsEditFormOpen(false);
+      loadBusBookings();
+    } catch (error) {
+      toast.error(`Failed to update booking: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const handleCancelBooking = async (id) => {
+    if (window.confirm('Are you sure you want to cancel this booking?')) {
+      try {
+        setIsLoading(true);
+        await deleteBusBooking(id);
+        toast.success("Bus booking cancelled successfully");
+        loadBusBookings();
+      } catch (error) {
+        toast.error(`Failed to cancel booking: ${error.message}`);
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // Loading state display
+  if (isLoading && busBookings.length === 0) {
+    return <div className="container-custom py-8 flex justify-center items-center min-h-[60vh]"><LoaderIcon className="w-12 h-12 text-primary animate-spin" /></div>;
+  }
 
   return (
     <motion.div
@@ -259,10 +303,13 @@ const BusBooking = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
                 <div>
                   <label className="block text-sm mb-1">Passenger Count</label>
                   <input
+                    min="1"
+                    max="10"
+                    step="1"
                     type="number"
                     name="passengerCount"
                     value={formData.passengerCount}
@@ -312,9 +359,14 @@ const BusBooking = () => {
                 </button>
                 <button 
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn btn-primary flex items-center gap-2"
+                  disabled={isSubmitting}
                 >
-                  Book Now
+                  {isSubmitting ? (
+                    <><LoaderIcon className="w-4 h-4 animate-spin" /> Processing...</>
+                  ) : (
+                    "Book Now"
+                  )}
                 </button>
               </div>
             </form>
@@ -433,7 +485,11 @@ const BusBooking = () => {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary flex items-center gap-1">
-                  <CheckIcon className="w-4 h-4" /> Update Booking
+                  {isSubmitting ? (
+                    <><LoaderIcon className="w-4 h-4 animate-spin" /> Processing...</>
+                  ) : (
+                    <><CheckIcon className="w-4 h-4" /> Update Booking</>
+                  )}
                 </button>
               </div>
             </form>
@@ -442,7 +498,8 @@ const BusBooking = () => {
       )}
 
       {busBookings.length === 0 ? (
-        <div className="card p-8 text-center">
+        isLoading ? <div className="card p-8 text-center"><LoaderIcon className="w-12 h-12 mx-auto text-primary animate-spin" /></div> :
+        (<div className="card p-8 text-center">
           <BusIcon className="w-12 h-12 mx-auto text-primary-light opacity-80 mb-4" />
           <h3 className="text-xl font-medium mb-2">No Bus Bookings Yet</h3>
           <p className="text-surface-500 dark:text-surface-400 mb-6">Start by adding your first bus booking</p>
@@ -451,7 +508,7 @@ const BusBooking = () => {
             className="btn btn-primary inline-flex items-center gap-1"
           >
             <PlusIcon className="w-4 h-4" />
-            Add Bus Booking
+            Add Bus Booking 
           </button>
         </div>
       ) : (

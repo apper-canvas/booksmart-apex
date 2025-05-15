@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import getIcon from '../utils/iconUtils';
+import { fetchTrainBookings, createTrainBooking, deleteTrainBooking } from '../services/trainBookingService';
+import { useSelector } from 'react-redux';
 
 const TrainBooking = () => {
   const [trainBookings, setTrainBookings] = useState([]);
@@ -17,28 +19,54 @@ const TrainBooking = () => {
     classType: 'economy',
     contactNumber: ''
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Get user information from Redux store
+  const { user } = useSelector((state) => state.user);
 
   // Icons
   const PlusIcon = getIcon('Plus');
   const MapPinIcon = getIcon('MapPin');
   const CalendarIcon = getIcon('Calendar');
   const UserIcon = getIcon('User');
+  const LoaderIcon = getIcon('Loader2');
   const PhoneIcon = getIcon('Phone');
   const XIcon = getIcon('X');
   const TrainIcon = getIcon('Train');
-
-  // Load bookings from localStorage on component mount
-  useEffect(() => {
-    const savedBookings = localStorage.getItem('trainBookings');
-    if (savedBookings) {
-      setTrainBookings(JSON.parse(savedBookings));
+  
+  // Load bookings from database on component mount
+  const loadTrainBookings = async () => {
+    try {
+      setIsLoading(true);
+      const bookings = await fetchTrainBookings();
+      
+      // Map the API response to our component state format
+      const formattedBookings = bookings.map(booking => ({
+        id: booking.Id,
+        origin: booking.origin,
+        destination: booking.destination,
+        date: booking.date,
+        time: booking.time,
+        passengerName: booking.passenger_name,
+        passengerCount: booking.passenger_count,
+        classType: booking.class_type,
+        contactNumber: booking.contact_number,
+        createdAt: booking.CreatedOn
+      }));
+      
+      setTrainBookings(formattedBookings);
+    } catch (error) {
+      toast.error(`Error loading train bookings: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
 
-  // Save bookings to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('trainBookings', JSON.stringify(trainBookings));
-  }, [trainBookings]);
+    loadTrainBookings();
+  }, []);
+  
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -48,40 +76,51 @@ const TrainBooking = () => {
     });
   };
 
-  const handleAddBooking = (e) => {
+  const handleAddBooking = async (e) => {
     e.preventDefault();
     
     // Simple validation
     if (!formData.origin || !formData.destination || !formData.date || !formData.time || !formData.passengerName) {
-      toast.error('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
-
-    const newBooking = {
-      ...formData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-
-    setTrainBookings([...trainBookings, newBooking]);
-    toast.success('Train booking added successfully!');
-    setIsFormOpen(false);
-    setFormData({
-      id: '',
+    
+    try {
+      setIsSubmitting(true);
+      await createTrainBooking(formData);
+      toast.success("Train booking added successfully!");
+      setIsFormOpen(false);
+      loadTrainBookings();
+      
+      // Reset form
+      setFormData({
+        id: '',
       origin: '',
       destination: '',
       date: '',
       time: '',
       passengerName: '',
       passengerCount: 1,
-      classType: 'economy',
+      });
+    } catch (error) {
+      toast.error(`Failed to create booking: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
       contactNumber: ''
     });
-  };
+  const handleCancelBooking = async (id) => {
 
-  const handleCancelBooking = (id) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      setTrainBookings(trainBookings.filter(booking => booking.id !== id));
+      try {
+        setIsLoading(true);
+        await deleteTrainBooking(id);
+        toast.success("Train booking cancelled successfully");
+        loadTrainBookings();
+      } catch (error) {
+        toast.error(`Failed to cancel booking: ${error.message}`);
+        setIsLoading(false);
+      }
+    }  
       toast.info('Train booking cancelled');
     }
   };
@@ -232,6 +271,9 @@ const TrainBooking = () => {
               
               <div>
                 <label className="block text-sm mb-1">Contact Number</label>
+                    min="1"
+                    max="10"
+                    step="1"
                 <div className="relative">
                   <PhoneIcon className="absolute left-3 top-2.5 w-4 h-4 text-surface-400" />
                   <input
@@ -256,8 +298,13 @@ const TrainBooking = () => {
                 <button 
                   type="submit"
                   className="btn btn-primary"
+                  disabled={isSubmitting}
                 >
-                  Book Now
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2"><LoaderIcon className="w-4 h-4 animate-spin" /> Processing...</span>
+                  ) : (
+                    "Book Now"
+                  )}
                 </button>
               </div>
             </form>
@@ -266,7 +313,8 @@ const TrainBooking = () => {
       )}
 
       {trainBookings.length === 0 ? (
-        <div className="card p-8 text-center">
+        isLoading ? <div className="card p-8 text-center"><LoaderIcon className="w-12 h-12 mx-auto text-primary animate-spin" /></div> :
+        (<div className="card p-8 text-center">
           <TrainIcon className="w-12 h-12 mx-auto text-primary-light opacity-80 mb-4" />
           <h3 className="text-xl font-medium mb-2">No Train Bookings Yet</h3>
           <p className="text-surface-500 dark:text-surface-400 mb-6">Start by adding your first train booking</p>
