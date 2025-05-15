@@ -154,8 +154,8 @@ function MainFeature() {
   };
   
   const handleCancelAppointment = async (id) => {
-  const handleCancelAppointment = async (id) => {
-        await deleteAppointment(id);
+    try {
+      await deleteAppointment(id);
         toast.success("Appointment cancelled successfully");
         loadAppointments();
       } catch (error) {
@@ -171,7 +171,6 @@ function MainFeature() {
     } catch (error) {
       return `${dateString} at ${timeString}`;
     }
-    return format(date, 'EEEE, MMMM d, yyyy - h:mm a');
   };
   
   // Function to get service duration by id
