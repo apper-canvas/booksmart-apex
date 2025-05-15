@@ -154,19 +154,17 @@ function MainFeature() {
   };
   
   const handleCancelAppointment = async (id) => {
-  const handleCancelAppointment = (id) => {
-      try {
+  const handleCancelAppointment = async (id) => {
         await deleteAppointment(id);
         toast.success("Appointment cancelled successfully");
         loadAppointments();
       } catch (error) {
         toast.error(`Failed to cancel appointment: ${error.message}`);
       }
-      toast.success("Appointment cancelled successfully");
-    }
+      }
   };
-  
   // Formatting function for displaying dates
+  const formatAppointmentDate = (dateString, timeString) => {
     try {
       const date = parseISO(`${dateString}T${timeString}`);
       return format(date, 'EEEE, MMMM d, yyyy - h:mm a');
