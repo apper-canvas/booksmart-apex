@@ -103,7 +103,7 @@ const TrainBooking = () => {
           className="btn btn-primary flex items-center gap-1"
         >
           <PlusIcon className="w-4 h-4" />
-          Add Booking
+          Add Train Booking
         </button>
       </div>
 
@@ -275,7 +275,7 @@ const TrainBooking = () => {
             className="btn btn-primary inline-flex items-center gap-1"
           >
             <PlusIcon className="w-4 h-4" />
-            Add Booking
+            Add Train Booking
           </button>
         </div>
       ) : (
