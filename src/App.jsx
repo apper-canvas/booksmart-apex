@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import getIcon from './utils/iconUtils';
 
 // Pages
+import BusBooking from './pages/BusBooking';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
 
@@ -30,6 +31,7 @@ function App() {
   // Pre-declare icon components
   const MoonIcon = getIcon('Moon');
   const SunIcon = getIcon('Sun');
+  const BusIcon = getIcon('Bus');
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -42,6 +44,14 @@ function App() {
               className="w-8 h-8" 
             />
             <h1 className="text-xl font-bold text-primary">BookSmart</h1>
+          </div>
+          
+          <div className="hidden md:flex gap-6 items-center">
+            <a href="/" className="text-surface-600 hover:text-primary transition-colors">Home</a>
+            <a href="/bus-booking" className="flex items-center gap-1 text-surface-600 hover:text-primary transition-colors">
+              <BusIcon className="w-4 h-4" />
+              <span>Bus Booking</span>
+            </a>
           </div>
           
           <button 
@@ -72,6 +82,7 @@ function App() {
         <AnimatePresence mode="wait">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/bus-booking" element={<BusBooking />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>
