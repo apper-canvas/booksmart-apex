@@ -6,7 +6,19 @@ import getIcon from '../utils/iconUtils';
 const BusBooking = () => {
   const [busBookings, setBusBookings] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [formData, setFormData] = useState({
+    id: '',
+    origin: '',
+    destination: '',
+    date: '',
+    time: '',
+    passengerName: '',
+    passengerCount: 1,
+    seatType: 'regular',
+    contactNumber: ''
+  });
+  const [editFormData, setEditFormData] = useState({
     id: '',
     origin: '',
     destination: '',
@@ -23,6 +35,9 @@ const BusBooking = () => {
   const MapPinIcon = getIcon('MapPin');
   const CalendarIcon = getIcon('Calendar');
   const UserIcon = getIcon('User');
+  const EditIcon = getIcon('Edit');
+  const ClockIcon = getIcon('Clock');
+  const CheckIcon = getIcon('Check');
   const PhoneIcon = getIcon('Phone');
   const XIcon = getIcon('X');
   const BusIcon = getIcon('Bus');
@@ -48,6 +63,13 @@ const BusBooking = () => {
     });
   };
 
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData({
+      ...editFormData,
+      [name]: value
+    });
+  };
   const handleAddBooking = (e) => {
     e.preventDefault();
     
@@ -77,6 +99,41 @@ const BusBooking = () => {
       seatType: 'regular',
       contactNumber: ''
     });
+  };
+
+  const handleEditRequest = (booking) => {
+    setEditFormData({
+      ...booking
+    });
+    setIsEditFormOpen(true);
+  };
+
+  const handleUpdateBooking = (e) => {
+    e.preventDefault();
+    
+    // Simple validation
+    if (!editFormData.date || !editFormData.time || !editFormData.passengerName) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Update the booking
+    const updatedBookings = busBookings.map(booking => {
+      if (booking.id === editFormData.id) {
+        return {
+          ...booking,
+          passengerName: editFormData.passengerName,
+          date: editFormData.date,
+          time: editFormData.time,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return booking;
+    });
+
+    setBusBookings(updatedBookings);
+    toast.success('Booking updated successfully!');
+    setIsEditFormOpen(false);
   };
 
   const handleCancelBooking = (id) => {
@@ -265,6 +322,125 @@ const BusBooking = () => {
         </div>
       )}
 
+      {isEditFormOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-surface-800 rounded-xl p-6 max-w-md w-full shadow-lg"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Request Edit Booking</h3>
+              <button 
+                onClick={() => setIsEditFormOpen(false)}
+                className="p-1 rounded-full hover:bg-surface-100 dark:hover:bg-surface-700"
+              >
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateBooking} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm mb-1">Origin</label>
+                  <div className="relative">
+                    <MapPinIcon className="absolute left-3 top-2.5 w-4 h-4 text-surface-400" />
+                    <input
+                      type="text"
+                      name="origin"
+                      value={editFormData.origin}
+                      className="pl-9 w-full bg-surface-100 dark:bg-surface-700 cursor-not-allowed"
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Destination</label>
+                  <div className="relative">
+                    <MapPinIcon className="absolute left-3 top-2.5 w-4 h-4 text-surface-400" />
+                    <input
+                      type="text"
+                      name="destination"
+                      value={editFormData.destination}
+                      className="pl-9 w-full bg-surface-100 dark:bg-surface-700 cursor-not-allowed"
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm mb-1">Date <span className="text-primary">*</span></label>
+                  <div className="relative">
+                    <CalendarIcon className="absolute left-3 top-2.5 w-4 h-4 text-surface-400" />
+                    <input
+                      type="date"
+                      name="date"
+                      value={editFormData.date}
+                      onChange={handleEditInputChange}
+                      className="pl-9 w-full"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Time <span className="text-primary">*</span></label>
+                  <div className="relative">
+                    <ClockIcon className="absolute left-3 top-2.5 w-4 h-4 text-surface-400" />
+                    <input
+                      type="time"
+                      name="time"
+                      value={editFormData.time}
+                      onChange={handleEditInputChange}
+                      className="pl-9 w-full"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm mb-1">Passenger Name <span className="text-primary">*</span></label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-2.5 w-4 h-4 text-surface-400" />
+                  <input
+                    type="text"
+                    name="passengerName"
+                    value={editFormData.passengerName}
+                    onChange={handleEditInputChange}
+                    className="pl-9 w-full"
+                    placeholder="Enter passenger name"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="border-t border-surface-200 dark:border-surface-700 pt-4 mt-4">
+                <p className="text-sm text-surface-500 dark:text-surface-400 mb-2">
+                  <span className="text-primary">*</span> Only passenger name, date and time can be modified
+                </p>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <button 
+                  type="button"
+                  onClick={() => setIsEditFormOpen(false)}
+                  className="btn btn-outline"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary flex items-center gap-1">
+                  <CheckIcon className="w-4 h-4" /> Update Booking
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
       {busBookings.length === 0 ? (
         <div className="card p-8 text-center">
           <BusIcon className="w-12 h-12 mx-auto text-primary-light opacity-80 mb-4" />
@@ -314,7 +490,13 @@ const BusBooking = () => {
                 )}
               </div>
               
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-end gap-2 mt-4">
+                <button 
+                  onClick={() => handleEditRequest(booking)}
+                  className="btn btn-outline text-sm py-1 px-3 flex items-center gap-1"
+                >
+                  <EditIcon className="w-3 h-3" /> Request Edit Booking
+                </button>
                 <button 
                   onClick={() => handleCancelBooking(booking.id)}
                   className="btn btn-danger text-sm py-1 px-3"
