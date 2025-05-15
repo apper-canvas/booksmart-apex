@@ -96,13 +96,13 @@ const BusBooking = () => {
       ...editFormData,
       [name]: value
     });
+  };
   
   const handleAddBooking = async (e) => {
-  const handleAddBooking = (e) => {
     e.preventDefault();
     
     // Simple validation
-      toast.error("Please fill in all required fields");
+    if (!formData.origin || !formData.destination || !formData.date || !formData.time || !formData.passengerName) {
       toast.error('Please fill in all required fields');
       return;
     
@@ -116,7 +116,6 @@ const BusBooking = () => {
       // Reset form data
       setFormData({
         id: '',
-      id: '',
       origin: '',
       destination: '',
       date: '',
@@ -124,6 +123,7 @@ const BusBooking = () => {
       passengerName: '',
       passengerCount: 1,
       seatType: 'regular',
+      contactNumber: ''
       });
     } catch (error) {
       toast.error(`Failed to create booking: ${error.message}`);
@@ -131,8 +131,6 @@ const BusBooking = () => {
       setIsSubmitting(false);
     }
     
-    
-    });
   };
 
   const handleEditRequest = (booking) => {
